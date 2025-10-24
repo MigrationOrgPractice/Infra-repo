@@ -1,8 +1,9 @@
-
 name: Sync GitHub Teams
 
 on:
   push:
+    branches:
+      - main  # mainブランチへのpush時のみ実行
     paths:
       - 'teams/*.txt'  # チーム定義ファイルが変更されたときにトリガー
 
@@ -13,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4  # Retrieve repository contents
+        with:
+          fetch-depth: 0  # 履歴をすべて取得し、差分抽出を可能にする
 
       - name: Set up Python
         uses: actions/setup-python@v4
