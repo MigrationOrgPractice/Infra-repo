@@ -1,4 +1,3 @@
-
 import os
 import subprocess
 import requests
@@ -64,6 +63,11 @@ for filepath in changed_team_files:
 
     added_users = current_users - previous_users
     removed_users = previous_users - current_users
+
+    print(f"current_users: {current_users}")
+    print(f"previous_users: {previous_users}")
+    print(f"added_users: {added_users}")
+    print(f"removed_users: {removed_users}")
 
     print(f"🔄 Syncing team: {team_name} ({team_slug})")
     for user in added_users:
