@@ -3,11 +3,9 @@ import os
 import subprocess
 import requests
 
-# 環境変数からトークンと組織名を取得
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 ORG_NAME = os.getenv("ORG_NAME")
 
-# GitHub APIの基本設定
 API_BASE = "https://api.github.com"
 HEADERS = {
     "Authorization": f"Bearer {GITHUB_TOKEN}",
@@ -16,11 +14,9 @@ HEADERS = {
 
 TEAM_DIR = "teams"
 
-# チーム名からslugを生成
 def get_team_slug(team_name):
     return team_name.lower().replace(" ", "-")
 
-# ユーザーをチームに追加
 def add_member(org, team_slug, username):
     url = f"{API_BASE}/orgs/{org}/teams/{team_slug}/memberships/{username}"
     response = requests.put(url, headers=HEADERS)
@@ -29,7 +25,6 @@ def add_member(org, team_slug, username):
     else:
         print(f"❌ Failed to add {username}: {response.text}")
 
-# ユーザーをチームから削除
 def remove_member(org, team_slug, username):
     url = f"{API_BASE}/orgs/{org}/teams/{team_slug}/memberships/{username}"
     response = requests.delete(url, headers=HEADERS)
@@ -38,7 +33,6 @@ def remove_member(org, team_slug, username):
     else:
         print(f"❌ Failed to remove {username}: {response.text}")
 
-# 前回コミットのファイル内容を取得
 def get_previous_file_content(filepath):
     try:
         result = subprocess.run(["git", "show", f"HEAD~1:{filepath}"], capture_output=True, text=True)
@@ -50,26 +44,29 @@ def get_previous_file_content(filepath):
         print(f"Error retrieving previous version of {filepath}: {e}")
         return set()
 
-# メイン処理
-for filename in os.listdir(TEAM_DIR):
-    if filename.endswith(".txt"):
-        team_name = os.path.splitext(filename)[0]
-        team_slug = get_team_slug(team_name)
-        filepath = os.path.join(TEAM_DIR, filename)
+def get_changed_team_files():
+    result = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], capture_output=True, text=True)
+    changed_files = result.stdout.splitlines()
+    return [f for f in changed_files if f.startswith(TEAM_DIR + "/") and f.endswith(".txt")]
 
-        # 現在のユーザーリスト
-        with open(filepath, "r") as f:
-            current_users = set(line.strip() for line in f if line.strip())
+# 差分のあるファイルだけ処理
+changed_team_files = get_changed_team_files()
 
-        # 前回のユーザーリスト
-        previous_users = get_previous_file_content(filepath)
+for filepath in changed_team_files:
+    filename = os.path.basename(filepath)
+    team_name = os.path.splitext(filename)[0]
+    team_slug = get_team_slug(team_name)
 
-        # 差分を計算
-        added_users = current_users - previous_users
-        removed_users = previous_users - current_users
+    with open(filepath, "r") as f:
+        current_users = set(line.strip() for line in f if line.strip())
 
-        print(f"🔄 Syncing team: {team_name} ({team_slug})")
-        for user in added_users:
-            add_member(ORG_NAME, team_slug, user)
-        for user in removed_users:
-            remove_member(ORG_NAME, team_slug, user)
+    previous_users = get_previous_file_content(filepath)
+
+    added_users = current_users - previous_users
+    removed_users = previous_users - current_users
+
+    print(f"🔄 Syncing team: {team_name} ({team_slug})")
+    for user in added_users:
+        add_member(ORG_NAME, team_slug, user)
+    for user in removed_users:
+        remove_member(ORG_NAME, team_slug, user)
