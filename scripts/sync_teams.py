@@ -40,8 +40,7 @@ def remove_member(org, team_slug, username):
 # 前回コミットのファイル内容を取得
 def get_previous_file_content(filepath):
     try:
-        # git showにはリポジトリルートからの相対パスが必要
-        repo_root = os.path.abspath(os.getcwd())
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         rel_path = os.path.relpath(filepath, repo_root)
         result = subprocess.run(["git", "show", f"HEAD~1:{rel_path}"], capture_output=True, text=True)
         if result.returncode == 0:
