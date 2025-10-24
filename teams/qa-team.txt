@@ -2,5 +2,4 @@ david
 ellen
 frank
 Mary
-Brian
-Rinat
+Daling
