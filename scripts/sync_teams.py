@@ -37,20 +37,24 @@ def remove_member(org, team_slug, username):
     else:
         print(f"❌ Failed to remove {username}: {response.text}")
 
-# 前回コミットのファイル内容を取得
-def get_previous_file_content(filepath):
-    try:
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        rel_path = os.path.relpath(filepath, repo_root)
-        result = subprocess.run(["git", "show", f"HEAD~1:{rel_path}"], capture_output=True, text=True)
-        if result.returncode == 0:
-            return set(line.strip() for line in result.stdout.splitlines() if line.strip())
-        else:
-            print(f"git show failed for {rel_path}: {result.stderr}")
-            return set()
-    except Exception as e:
-        print(f"Error retrieving previous version of {filepath}: {e}")
-        return set()
+# 差分抽出関数（git diff利用）
+def get_file_diff_users(filepath):
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    rel_path = os.path.relpath(filepath, repo_root)
+    result = subprocess.run([
+        "git", "diff", "HEAD~1", "HEAD", "--", rel_path
+    ], capture_output=True, text=True)
+    added = set()
+    removed = set()
+    if result.returncode == 0:
+        for line in result.stdout.splitlines():
+            if line.startswith("+") and not line.startswith("+++"):
+                added.add(line[1:].strip())
+            elif line.startswith("-") and not line.startswith("---"):
+                removed.add(line[1:].strip())
+    else:
+        print(f"git diff failed for {rel_path}: {result.stderr}")
+    return added, removed
 
 # メイン処理
 for filename in os.listdir(TEAM_DIR):
@@ -59,19 +63,9 @@ for filename in os.listdir(TEAM_DIR):
         team_slug = get_team_slug(team_name)
         filepath = os.path.join(TEAM_DIR, filename)
 
-        # 現在のユーザーリスト
-        with open(filepath, "r") as f:
-            current_users = set(line.strip() for line in f if line.strip())
+        # 差分ユーザーを取得
+        added_users, removed_users = get_file_diff_users(filepath)
 
-        # 前回のユーザーリスト
-        previous_users = get_previous_file_content(filepath)
-
-        # 差分を計算
-        added_users = current_users - previous_users
-        removed_users = previous_users - current_users
-
-        print(f"current_users: {current_users}")
-        print(f"previous_users: {previous_users}")
         print(f"added_users: {added_users}")
         print(f"removed_users: {removed_users}")
 
