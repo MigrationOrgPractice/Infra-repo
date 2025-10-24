@@ -2,6 +2,8 @@ name: Sync GitHub Teams
 
 on:
   push:
+    branches:
+      - main  # mainブランチへのpush時のみ実行
     paths:
       - 'teams/*.txt'  # チーム定義ファイルが変更されたときにトリガー
 
