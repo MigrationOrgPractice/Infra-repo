@@ -41,6 +41,18 @@ def remove_member(org, team_slug, username):
 def get_file_diff_users(filepath):
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rel_path = os.path.relpath(filepath, repo_root)
+    # HEAD~1が存在しない場合（初回コミット）は全ユーザー追加
+    result = subprocess.run([
+        "git", "rev-parse", "HEAD~1"
+    ], capture_output=True, text=True)
+    if result.returncode != 0:
+        # ファイルの全ユーザーを追加
+        with open(filepath, "r") as f:
+            added = set(line.strip() for line in f if line.strip())
+        removed = set()
+        print(f"初回コミット: 全ユーザー追加対象: {added}")
+        return added, removed
+    # 通常の差分抽出
     result = subprocess.run([
         "git", "diff", "HEAD~1", "HEAD", "--", rel_path
     ], capture_output=True, text=True)
@@ -49,9 +61,13 @@ def get_file_diff_users(filepath):
     if result.returncode == 0:
         for line in result.stdout.splitlines():
             if line.startswith("+") and not line.startswith("+++"):
-                added.add(line[1:].strip())
+                user = line[1:].strip()
+                if user:
+                    added.add(user)
             elif line.startswith("-") and not line.startswith("---"):
-                removed.add(line[1:].strip())
+                user = line[1:].strip()
+                if user:
+                    removed.add(user)
     else:
         print(f"git diff failed for {rel_path}: {result.stderr}")
     return added, removed
