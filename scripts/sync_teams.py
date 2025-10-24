@@ -1,12 +1,13 @@
 
 import os
-import requests
 import subprocess
+import requests
 
 # 環境変数からトークンと組織名を取得
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 ORG_NAME = os.getenv("ORG_NAME")
 
+# GitHub APIの基本設定
 API_BASE = "https://api.github.com"
 HEADERS = {
     "Authorization": f"Bearer {GITHUB_TOKEN}",
@@ -15,23 +16,36 @@ HEADERS = {
 
 TEAM_DIR = "teams"
 
+# チーム名からslugを生成
 def get_team_slug(team_name):
     return team_name.lower().replace(" ", "-")
 
+# ユーザーをチームに追加
 def add_member(org, team_slug, username):
     url = f"{API_BASE}/orgs/{org}/teams/{team_slug}/memberships/{username}"
     response = requests.put(url, headers=HEADERS)
-    print(f"✅ Added {username} to {team_slug}" if response.ok else f"❌ Failed to add {username}: {response.text}")
+    if response.status_code in [200, 201]:
+        print(f"✅ Added {username} to {team_slug}")
+    else:
+        print(f"❌ Failed to add {username}: {response.text}")
 
+# ユーザーをチームから削除
 def remove_member(org, team_slug, username):
     url = f"{API_BASE}/orgs/{org}/teams/{team_slug}/memberships/{username}"
     response = requests.delete(url, headers=HEADERS)
-    print(f"🗑️ Removed {username} from {team_slug}" if response.status_code == 204 else f"❌ Failed to remove {username}: {response.text}")
+    if response.status_code == 204:
+        print(f"🗑️ Removed {username} from {team_slug}")
+    else:
+        print(f"❌ Failed to remove {username}: {response.text}")
 
+# 前回コミットのファイル内容を取得
 def get_previous_file_content(filepath):
     try:
         result = subprocess.run(["git", "show", f"HEAD~1:{filepath}"], capture_output=True, text=True)
-        return set(line.strip() for line in result.stdout.splitlines() if line.strip())
+        if result.returncode == 0:
+            return set(line.strip() for line in result.stdout.splitlines() if line.strip())
+        else:
+            return set()
     except Exception as e:
         print(f"Error retrieving previous version of {filepath}: {e}")
         return set()
@@ -43,11 +57,14 @@ for filename in os.listdir(TEAM_DIR):
         team_slug = get_team_slug(team_name)
         filepath = os.path.join(TEAM_DIR, filename)
 
+        # 現在のユーザーリスト
         with open(filepath, "r") as f:
             current_users = set(line.strip() for line in f if line.strip())
 
+        # 前回のユーザーリスト
         previous_users = get_previous_file_content(filepath)
 
+        # 差分を計算
         added_users = current_users - previous_users
         removed_users = previous_users - current_users
 
