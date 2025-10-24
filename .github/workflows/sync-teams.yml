@@ -1,0 +1,29 @@
+
+name: Sync GitHub Teams
+
+on:
+  push:
+    paths:
+      - 'teams/*.txt'  # チーム定義ファイルが変更されたときにトリガー
+
+jobs:
+  sync-teams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4  # リポジトリの内容を取得
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'  # Python環境をセットアップ
+
+      - name: Install dependencies
+        run: pip install requests  # GitHub API呼び出し用ライブラリをインストール
+
+      - name: Run sync script
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_ADMIN_PAT }}  # GitHubのPAT（管理者権限付き）
+          ORG_NAME: MigrationOrgPractice  # 組織名（例: my-org）
+        run: python scripts/sync_teams.py  # チーム同期スクリプトを実行
