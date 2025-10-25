@@ -52,9 +52,9 @@ def get_file_diff_users(filepath):
         removed = set()
         print(f"初回コミット: 全ユーザー追加対象: {added}")
         return added, removed
-    # mainブランチとの差分抽出
+    # HEAD~1との差分を取得
     result = subprocess.run([
-        "git", "diff", "origin/main", "HEAD", "--", rel_path
+        "git", "diff", "HEAD~1", "HEAD", "--", rel_path
     ], capture_output=True, text=True)
     added = set()
     removed = set()
