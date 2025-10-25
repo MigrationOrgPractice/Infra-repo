@@ -28,5 +28,5 @@ jobs:
       - name: Run sync script
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_ADMIN_PAT }}  # GitHubのPAT（管理者権限付き）
-          ORG_NAME: 'MigrationOrgPractice'  # 組織名（例: my-org）
+          ORG_NAME: ${{ secrets.ORG_NAME }}  # 組織名をSecretsから環境変数として取得
         run: python scripts/sync_teams.py  # チーム同期スクリプトを実行
